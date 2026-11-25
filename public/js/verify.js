@@ -4,7 +4,7 @@
   const esc = (v) => String(v === null || v === undefined ? '' : v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const fmt = (d) => new Date(d).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-  const STATUS = { registered: 'Registered', processed: 'Processed', in_transit: 'In transit', inspected: 'Inspected', export_approved: 'Export approved', exported: 'Exported', shipped: 'Shipped', received: 'Received', on_hold: 'ON HOLD', rejected: 'REJECTED – under investigation' };
+  const STATUS = { registered: 'Registered', processed: 'Processed', in_transit: 'In transit', inspected: 'Inspected', export_approved: 'Export approved', exported: 'Exported', shipped: 'Shipped', received: 'Received', on_hold: 'ON HOLD', rejected: 'REJECTED – under investigation', export_rejected: 'EXPORT PERMIT REJECTED' };
   let scanner = null;
 
   function tokenFrom(raw) {
@@ -26,6 +26,7 @@
     const broken = c.valid ? null : (d.timeline[c.events_checked] || {}).seq;
     out.innerHTML = `
       ${c.valid && (b.status === 'rejected' || b.status === 'on_hold') ? `<div class="banner ${b.status === 'rejected' ? 'bad' : 'warn'}" role="alert">${b.status === 'rejected' ? '⛔ REJECTED — this consignment is stopped pending investigation' : '⏸ ON HOLD — this consignment is temporarily stopped'}<span class="small">Do not accept or move it until the authorities have cleared it.</span></div>` : ''}
+      ${c.valid && b.status === 'export_rejected' ? '<div class="banner warn" role="alert">✖ EXPORT PERMIT REJECTED<span class="small">This consignment may not be exported until the regulator grants a permit.</span></div>' : ''}
       <div class="banner ${c.valid ? (b.flagged ? 'warn' : 'ok') : 'bad'}">
         ${c.valid ? (b.flagged ? '⚑ Genuine batch — chain intact, but flagged for a weight discrepancy' : '✔ Genuine batch — chain of custody intact') : '✖ TAMPERING DETECTED'}
         <span class="small">${c.valid ? c.events_checked + ' recorded events verified with SHA-256.' : esc(c.reason)}</span>

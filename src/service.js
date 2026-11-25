@@ -195,6 +195,9 @@ function stateError(type, status) {
   if (P.HELD_STATUSES.includes(status) && !rule.from.includes(status)) {
     return `This consignment is ${status === 'rejected' ? 'REJECTED and under investigation' : 'ON HOLD'}: it cannot move further until it is resumed by an administrator, inspector, border, weighbridge or regulator officer`;
   }
+  if (status === 'export_rejected' && !rule.from.includes(status)) {
+    return 'The export permit for this consignment was REJECTED: it cannot be exported or shipped until a regulator grants the permit (after the issue is resolved and, if needed, a re-inspection)';
+  }
   if (!rule.from.includes(status)) return `${type} cannot follow status "${status}"`;
   return null;
 }

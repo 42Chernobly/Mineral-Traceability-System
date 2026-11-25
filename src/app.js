@@ -193,6 +193,7 @@ function createApp() {
       can_register: ['mine', 'admin'].includes(req.user.role),
       can_audit: ['regulator', 'admin'].includes(req.user.role),
       can_hold: P.HOLD_ROLES.includes(req.user.role),
+      can_decide_export: P.EVENT_RULES.EXPORT_APPROVED.roles.includes(req.user.role),
       tamper_demo: config.enableTamperDemo && req.user.role === 'admin',
       map: { tile_url: config.map.tileUrl, tile_url_dark: config.map.tileUrlDark, attribution: config.map.attribution, subdomains: config.map.subdomains },
       stop: req.user.stop_name ? { name: req.user.stop_name, country: req.user.stop_country, region: req.user.stop_region } : null,

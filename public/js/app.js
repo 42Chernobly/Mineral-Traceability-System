@@ -8,7 +8,7 @@
   const fmtDate = (d) => new Date(d).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
   const fmtKg = (n) => (n === null || n === undefined ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: 3 }) + ' kg');
   const short = (h) => (h ? h.slice(0, 10) + '…' + h.slice(-6) : '');
-  const STATUS = { registered: 'Registered', processed: 'Processed', in_transit: 'In transit', inspected: 'Inspected', export_approved: 'Export approved', exported: 'Exported', shipped: 'Shipped', received: 'Received', on_hold: 'On hold', rejected: 'Rejected – under investigation' };
+  const STATUS = { registered: 'Registered', processed: 'Processed', in_transit: 'In transit', inspected: 'Inspected', export_approved: 'Export approved', exported: 'Exported', shipped: 'Shipped', received: 'Received', on_hold: 'On hold', rejected: 'Rejected – under investigation', export_rejected: 'Export permit rejected' };
 
   const store = {
     get token() { try { return sessionStorage.getItem('mt_token'); } catch (e) { return null; } },
@@ -172,7 +172,7 @@
     return run(viewDashboard);
   }
 
-  const statusBadge = (s) => `<span class="badge ${s === 'received' || s === 'exported' ? 'ok' : s === 'rejected' ? 'bad' : s === 'on_hold' ? 'warn' : ''}">${esc(STATUS[s] || s)}</span>`;
+  const statusBadge = (s) => `<span class="badge ${s === 'received' || s === 'exported' ? 'ok' : s === 'rejected' ? 'bad' : s === 'on_hold' || s === 'export_rejected' ? 'warn' : ''}">${esc(STATUS[s] || s)}</span>`;
 
   // ---------- dashboard ----------
   async function viewDashboard(main, opts) {
@@ -241,7 +241,7 @@
     moving: { label: 'In transit / inspected / export approved', cls: 's-moving', token: '--brand', st: ['in_transit', 'inspected', 'export_approved'] },
     exported: { label: 'Exported / shipped', cls: 's-exported', token: '--accent', st: ['exported', 'shipped'] },
     delivered: { label: 'Received by buyer', cls: 's-delivered', token: '--ink', st: ['received'] },
-    held: { label: 'On hold / rejected (stopped)', cls: 's-held', token: '--bad', st: ['on_hold', 'rejected'] },
+    held: { label: 'Stopped (hold, rejected, export permit rejected)', cls: 's-held', token: '--bad', st: ['on_hold', 'rejected', 'export_rejected'] },
   };
   const groupOf = (status) => Object.keys(GROUPS).find((k) => GROUPS[k].st.includes(status)) || 'origin';
   const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
@@ -374,6 +374,8 @@
     const held = ['on_hold', 'rejected'].includes(b.status);
     const canAdd = meta.event_types.length && b.status !== 'received' && !held;
     const canControl = meta.can_hold && b.status !== 'received';
+    const canDecide = meta.can_decide_export && ['inspected', 'export_approved', 'export_rejected'].includes(b.status);
+    const refusedEv = b.status === 'export_rejected' ? [...d.events].reverse().find((e) => e.event_type === 'EXPORT_REJECTED') : null;
     const stopEv = held ? [...d.events].reverse().find((e) => e.event_type === 'HOLD' || e.event_type === 'REJECTED') : null;
     const brokenSeq = d.integrity.valid ? null : d.integrity.brokenAtSeq;
     main.innerHTML = `
@@ -382,6 +384,8 @@
       ${integrityBanner(d.integrity)}
       ${held ? `<div class="banner ${b.status === 'rejected' ? 'bad' : 'warn'}" role="alert">${b.status === 'rejected' ? '⛔ REJECTED — pending investigation' : '⏸ ON HOLD'}
         <span class="small">No further movement or handling can be recorded until this consignment is resumed.${stopEv ? ` ${esc(stopEv.label)} by ${esc(stopEv.actor_org)} on ${fmtDate(stopEv.occurred_at)}: “${esc(stopEv.notes)}”` : ''}</span></div>` : ''}
+      ${refusedEv ? `<div class="banner warn" role="alert">✖ EXPORT PERMIT REJECTED
+        <span class="small">This consignment cannot be exported or shipped until a regulator grants the permit.${refusedEv ? ` Rejected by ${esc(refusedEv.actor_org)} on ${fmtDate(refusedEv.occurred_at)}: “${esc(refusedEv.notes)}”` : ''}</span></div>` : ''}
       <div class="grid cols-2">
         <div class="card">
           <h3>Batch details</h3>
@@ -403,6 +407,21 @@
           <p class="small"><a href="${esc(d.qr.url)}" target="_blank" rel="noopener">Open public verification page</a></p>
         </div>
       </div>
+      ${canDecide ? `
+      <div class="card" id="exp-card">
+        <h3>Export permit decision</h3>
+        <p class="small muted">${b.status === 'inspected' ? 'This consignment has been inspected. Grant the export permit, or reject it if the situation does not allow export.'
+    : b.status === 'export_approved' ? 'The export permit has been granted. You can still reject (withdraw) it before the goods leave the country.'
+      : 'The permit was rejected. Once the issue is resolved you can grant it (record a re-inspection first in the form below if needed).'}
+          Every decision is recorded permanently in the chain.</p>
+        <form id="exp-form">
+          <div class="row">
+            <div><label for="exp-n">Reason / permit reference ${b.status === 'export_approved' ? '(required to reject)' : '(required to reject, optional to grant)'}</label><input id="exp-n" maxlength="500" placeholder="e.g. Permit no. ZRA/EX/2026/0412, or: export licence expired"></div>
+            <div><label for="exp-loc">Location</label><input id="exp-loc" required maxlength="120" placeholder="e.g. ZRA Head Office, Lusaka" ${meta.stop ? `value="${esc(meta.stop.name)}" readonly title="Fixed to your stop"` : ''}></div>
+          </div>
+          <p>${b.status !== 'export_approved' ? '<button type="button" class="btn" data-exp="EXPORT_APPROVED">✔ Grant export permit</button> ' : ''}${b.status !== 'export_rejected' ? '<button type="button" class="btn danger" data-exp="EXPORT_REJECTED">✖ Reject export permit</button>' : ''}</p>
+        </form>
+      </div>` : ''}
       ${canControl ? `
       <div class="card" id="ctl-card">
         <h3>Consignment controls</h3>
@@ -443,6 +462,18 @@
           </li>`).join('')}</ol>
       </div>`;
     loadQr(b.batch_code);
+    const exp = $('#exp-form');
+    if (exp) {
+      const ask = { EXPORT_APPROVED: 'Grant the export permit for this consignment?', EXPORT_REJECTED: 'REJECT the export permit for this consignment?' };
+      const done = { EXPORT_APPROVED: 'Export permit granted', EXPORT_REJECTED: 'Export permit rejected' };
+      exp.querySelectorAll('[data-exp]').forEach((btn) => btn.addEventListener('click', () => {
+        const type = btn.dataset.exp; const note = $('#exp-n').value.trim();
+        if (!exp.reportValidity()) return;
+        if (type === 'EXPORT_REJECTED' && note.length < 5) { toast('Give a reason (at least 5 characters) for rejecting the permit'); $('#exp-n').focus(); return; }
+        if (!confirm(ask[type])) return;
+        submitEvent(b.batch_code, { event_type: type, location: $('#exp-loc').value, notes: note }, done[type]);
+      }));
+    }
     const ctl = $('#ctl-form');
     if (ctl) {
       const ask = { HOLD: 'Place this consignment on hold?', REJECTED: 'REJECT this consignment? It will stop here pending investigation.', RESUMED: 'Resume movement of this consignment?' };

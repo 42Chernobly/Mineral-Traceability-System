@@ -14,7 +14,7 @@ Working prototype for the ICT431 capstone proposal *"Secure Cloud for Mineral Pr
 | QR codes | `qrcode` (generation) and `html5-qrcode` (browser camera scanning) |
 | Security | JWT (signature, issuer, audience, expiry, algorithm checked), RBAC, SHA-256 hash chain, HTTPS/TLS at the host, Helmet, rate limiting, bcrypt |
 | Hosting | Render blueprint included (`render.yaml`); works on Railway/AWS too |
-| Testing | Jest + Supertest (96 tests), Postman collection |
+| Testing | Jest + Supertest (113 tests), Postman collection |
 | Version control | Git / GitHub (`.gitignore` included) |
 
 ## Quick start (zero setup)
@@ -39,6 +39,10 @@ npm start
 ```
 
 The schema is created automatically on start. With a `DATABASE_URL` the demo data is *not* loaded unless `SEED_DEMO=true`. For a clean first administrator, set `ADMIN_USERNAME` and `ADMIN_PASSWORD` (12+ chars) on the first boot.
+
+## Export permit decisions (regulators)
+
+On a consignment that has been inspected, **Regulators** (and administrators) get an *Export permit decision* panel with **Grant export permit** and **Reject export permit**. A permit already granted can still be rejected (withdrawn) before the goods leave the country. A rejection needs a written reason; status becomes *Export permit rejected* and the consignment cannot be exported or shipped. When the issue is resolved the regulator can grant the permit (a re-inspection can be recorded first). The same two outcomes are in the regulator's *Record a handling event* list. Every decision is a hash-chained event, shown on the public portal as a warning (without the reason).
 
 ## Accounts list on the sign-in page (demo mode only)
 

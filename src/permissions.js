@@ -31,7 +31,7 @@ const HOLD_ROLES = ['admin', 'inspector', 'border', 'weighbridge', 'regulator'];
 // Statuses in which a consignment is stopped. Nothing else can be recorded until it is resumed.
 const HELD_STATUSES = ['on_hold', 'rejected'];
 // Statuses a consignment can be stopped from (anything still in the chain of custody).
-const ACTIVE_STATUSES = ['registered', 'processed', 'in_transit', 'inspected', 'export_approved', 'exported', 'shipped'];
+const ACTIVE_STATUSES = ['registered', 'processed', 'in_transit', 'inspected', 'export_approved', 'export_rejected', 'exported', 'shipped'];
 
 // event_type -> who may record it, which batch status it leads to, and
 // which statuses it may follow (state machine for the chain of custody).
@@ -42,8 +42,10 @@ const EVENT_RULES = {
   WEIGHBRIDGE:     { label: 'Weighbridge reading',  roles: ['weighbridge', 'admin'],                                       status: null,              from: ['registered', 'processed', 'in_transit', 'inspected', 'export_approved', 'exported'] },
   DISPATCHED:      { label: 'Dispatched',           roles: ['mine', 'transporter', 'admin'],                               status: 'in_transit',      from: ['registered', 'processed'] },
   CHECKPOINT:      { label: 'Transit / border checkpoint', roles: ['transporter', 'weighbridge', 'inspector', 'regulator', 'border', 'port', 'admin'], status: null, from: ['in_transit', 'inspected', 'export_approved', 'exported', 'shipped'] },
-  INSPECTED:       { label: 'Inspected',            roles: ['inspector', 'regulator', 'admin'],                            status: 'inspected',       from: ['registered', 'processed', 'in_transit'] },
-  EXPORT_APPROVED: { label: 'Export permit issued', roles: ['regulator', 'admin'],                                         status: 'export_approved', from: ['inspected'] },
+  INSPECTED:       { label: 'Inspected',            roles: ['inspector', 'regulator', 'admin'],                            status: 'inspected',       from: ['registered', 'processed', 'in_transit', 'export_rejected'] }, // a refused consignment can be re-inspected
+  EXPORT_APPROVED: { label: 'Export permit issued', roles: ['regulator', 'admin'],                                         status: 'export_approved', from: ['inspected', 'export_rejected'] }, // granted, or granted later once a refusal is resolved
+  // The regulator's other possible decision: refuse the permit, or withdraw one already granted (before the goods leave).
+  EXPORT_REJECTED: { label: 'Export permit rejected', roles: ['regulator', 'admin'], status: 'export_rejected', from: ['inspected', 'export_approved'], reason: true },
   EXPORTED:        { label: 'Exported (left Zambia)', roles: ['regulator', 'admin'],                                       status: 'exported',        from: ['export_approved'] },
   SHIPPED:         { label: 'Loaded on vessel / shipped', roles: ['port', 'admin'],                                        status: 'shipped',         from: ['exported'] },
   RECEIVED:        { label: 'Received by buyer',    roles: ['buyer', 'admin'],                                             status: 'received',        from: ['exported', 'shipped'] },
@@ -66,7 +68,7 @@ const GLOBAL_VIEW_ROLES = ['admin', 'regulator', 'inspector', 'weighbridge', 'tr
  * and are moving towards export. They cannot browse batches still being produced.
  */
 const OUTBOUND_VIEW_ROLES = ['border', 'port'];
-const OUTBOUND_STATUSES = ['in_transit', 'inspected', 'export_approved', 'exported', 'shipped', 'received'];
+const OUTBOUND_STATUSES = ['in_transit', 'inspected', 'export_approved', 'export_rejected', 'exported', 'shipped', 'received'];
 
 const WEIGHT_TOLERANCE = 0.02; // 2% difference vs declared weight raises a flag
 
