@@ -8,7 +8,7 @@
   const fmtDate = (d) => new Date(d).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
   const fmtKg = (n) => (n === null || n === undefined ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: 3 }) + ' kg');
   const short = (h) => (h ? h.slice(0, 10) + '…' + h.slice(-6) : '');
-  const STATUS = { registered: 'Registered', processed: 'Processed', in_transit: 'In transit', inspected: 'Inspected', export_approved: 'Export approved', exported: 'Exported', shipped: 'Shipped', received: 'Received' };
+  const STATUS = { registered: 'Registered', processed: 'Processed', in_transit: 'In transit', inspected: 'Inspected', export_approved: 'Export approved', exported: 'Exported', shipped: 'Shipped', received: 'Received', on_hold: 'On hold', rejected: 'Rejected – under investigation' };
 
   const store = {
     get token() { try { return sessionStorage.getItem('mt_token'); } catch (e) { return null; } },
@@ -157,7 +157,7 @@
     return run(viewDashboard);
   }
 
-  const statusBadge = (s) => `<span class="badge ${s === 'received' || s === 'exported' ? 'ok' : ''}">${esc(STATUS[s] || s)}</span>`;
+  const statusBadge = (s) => `<span class="badge ${s === 'received' || s === 'exported' ? 'ok' : s === 'rejected' ? 'bad' : s === 'on_hold' ? 'warn' : ''}">${esc(STATUS[s] || s)}</span>`;
 
   // ---------- dashboard ----------
   async function viewDashboard(main, opts) {
@@ -226,6 +226,7 @@
     moving: { label: 'In transit / inspected / export approved', cls: 's-moving', token: '--brand', st: ['in_transit', 'inspected', 'export_approved'] },
     exported: { label: 'Exported / shipped', cls: 's-exported', token: '--accent', st: ['exported', 'shipped'] },
     delivered: { label: 'Received by buyer', cls: 's-delivered', token: '--ink', st: ['received'] },
+    held: { label: 'On hold / rejected (stopped)', cls: 's-held', token: '--bad', st: ['on_hold', 'rejected'] },
   };
   const groupOf = (status) => Object.keys(GROUPS).find((k) => GROUPS[k].st.includes(status)) || 'origin';
   const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
@@ -253,7 +254,7 @@
     $('#cmap').classList.toggle('tiles-invert', isDark() && !m.tile_url_dark);
   }
   let cmap = null; let cLayer = null; let cData = null; let cCodes = null; let routeBounds = null; let allBounds = null;
-  function destroyMap() { if (cmap) { cmap.remove(); cmap = null; cLayer = null; } }
+  function destroyMap() { if (cmap) { cmap.stop(); cmap.remove(); cmap = null; cLayer = null; } }
   if (window.matchMedia) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     (mq.addEventListener ? mq.addEventListener.bind(mq, 'change') : mq.addListener.bind(mq))(() => { if (cmap) { setBasemap(); drawMap(cCodes); } });
@@ -283,8 +284,8 @@
     cmap = L.map('cmap', { worldCopyJump: true, minZoom: 2 }).setView(DEFAULT_VIEW[0], DEFAULT_VIEW[1]);
     setBasemap();
     cLayer = L.layerGroup().addTo(cmap);
-    $('#map-route').addEventListener('click', () => routeBounds && cmap.fitBounds(routeBounds, { padding: [30, 30], maxZoom: 8 }));
-    $('#map-all').addEventListener('click', () => allBounds && cmap.fitBounds(allBounds, { padding: [30, 30] }));
+    $('#map-route').addEventListener('click', () => routeBounds && cmap.fitBounds(routeBounds, { padding: [30, 30], maxZoom: 8, animate: false }));
+    $('#map-all').addEventListener('click', () => allBounds && cmap.fitBounds(allBounds, { padding: [30, 30], animate: false }));
   }
 
   function drawMap(codes) {
@@ -308,7 +309,7 @@
       const d = c.destination_point;
       if (d) {
         if (!dests.has(d.place)) dests.set(d.place, d);
-        if (c.current && c.status !== 'received' && (Math.abs(d.lat - c.current.lat) + Math.abs(d.lng - c.current.lng)) > 0.05) {
+        if (c.current && c.status !== 'received' && !GROUPS.held.st.includes(c.status) && (Math.abs(d.lat - c.current.lat) + Math.abs(d.lng - c.current.lng)) > 0.05) {
           L.polyline(arc([c.current.lat, c.current.lng], [d.lat, d.lng]), { color: cssVar('--muted'), weight: 2, opacity: 0.8, dashArray: '4 7' }).addTo(cLayer);
         }
       }
@@ -333,10 +334,11 @@
     }));
     const all = route.concat(far, [...dests.values()].map((d) => [d.lat, d.lng]));
     routeBounds = route.length ? L.latLngBounds(route) : null; allBounds = all.length ? L.latLngBounds(all) : null;
-    if (routeBounds) cmap.fitBounds(routeBounds, { padding: [30, 30], maxZoom: 8 }); else cmap.setView(DEFAULT_VIEW[0], DEFAULT_VIEW[1]);
+    if (routeBounds) cmap.fitBounds(routeBounds, { padding: [30, 30], maxZoom: 8, animate: false }); else cmap.setView(DEFAULT_VIEW[0], DEFAULT_VIEW[1], { animate: false });
     const moving = list.filter((c) => GROUPS.moving.st.includes(c.status) || GROUPS.exported.st.includes(c.status)).length;
     const unplaced = list.filter((c) => !c.current).length; const flagged = list.filter((c) => c.flagged).length;
-    $('#map-sum').textContent = `${list.length} consignment${list.length === 1 ? '' : 's'} shown · ${moving} on the move · ${flagged} flagged`;
+    const stopped = list.filter((c) => GROUPS.held.st.includes(c.status)).length;
+    $('#map-sum').textContent = `${list.length} consignment${list.length === 1 ? '' : 's'} shown · ${moving} on the move · ${stopped} stopped · ${flagged} flagged`;
     const places = [...new Set(list.flatMap((c) => c.unmapped))];
     $('#map-note').textContent = (unplaced || places.length)
       ? `${unplaced ? unplaced + ' consignment(s) have no place that can be shown on the map. ' : ''}${places.length ? 'Not placed on the map: ' + places.join(', ') + '. ' : ''}Admins can add coordinates to a stop under Users & stops.`
@@ -354,12 +356,17 @@
     main.innerHTML = '<p class="muted">Loading…</p>';
     const d = await api('GET', '/api/batches/' + encodeURIComponent(code));
     const b = d.batch;
-    const canAdd = meta.event_types.length && b.status !== 'received';
+    const held = ['on_hold', 'rejected'].includes(b.status);
+    const canAdd = meta.event_types.length && b.status !== 'received' && !held;
+    const canControl = meta.can_hold && b.status !== 'received';
+    const stopEv = held ? [...d.events].reverse().find((e) => e.event_type === 'HOLD' || e.event_type === 'REJECTED') : null;
     const brokenSeq = d.integrity.valid ? null : d.integrity.brokenAtSeq;
     main.innerHTML = `
       <p><a href="#/">← All batches</a></p>
       <h1 class="mono">${esc(b.batch_code)} ${statusBadge(b.status)} ${b.flagged ? '<span class="badge bad">⚑ weight discrepancy</span>' : ''}</h1>
       ${integrityBanner(d.integrity)}
+      ${held ? `<div class="banner ${b.status === 'rejected' ? 'bad' : 'warn'}" role="alert">${b.status === 'rejected' ? '⛔ REJECTED — pending investigation' : '⏸ ON HOLD'}
+        <span class="small">No further movement or handling can be recorded until this consignment is resumed.${stopEv ? ` ${esc(stopEv.label)} by ${esc(stopEv.actor_org)} on ${fmtDate(stopEv.occurred_at)}: “${esc(stopEv.notes)}”` : ''}</span></div>` : ''}
       <div class="grid cols-2">
         <div class="card">
           <h3>Batch details</h3>
@@ -381,6 +388,20 @@
           <p class="small"><a href="${esc(d.qr.url)}" target="_blank" rel="noopener">Open public verification page</a></p>
         </div>
       </div>
+      ${canControl ? `
+      <div class="card" id="ctl-card">
+        <h3>Consignment controls</h3>
+        <p class="small muted">${held ? 'Once the issue is resolved, resume movement. Your resolution note is recorded permanently in the chain.' : 'Use <b>Reject</b> if the consignment looks tampered with: it stops here and waits for investigation. Use <b>Hold</b> for a temporary stop. Both can be resumed once the issue is resolved.'}</p>
+        <form id="ctl-form">
+          <div class="row">
+            <div><label for="ctl-n">${held ? 'Resolution note (required)' : 'Reason (required)'}</label><input id="ctl-n" required minlength="5" maxlength="500" placeholder="${held ? 'e.g. Seals re-checked, weight verified, cleared by inspector' : 'e.g. Container seal broken on arrival'}"></div>
+            <div><label for="ctl-loc">Location</label><input id="ctl-loc" required maxlength="120" placeholder="e.g. Kasumbalesa Border Post" ${meta.stop ? `value="${esc(meta.stop.name)}" readonly title="Fixed to your stop"` : ''}></div>
+          </div>
+          <p>${held
+    ? `<button type="button" class="btn" data-ctl="RESUMED">▶ Resume movement</button>${b.status === 'on_hold' ? ' <button type="button" class="btn danger" data-ctl="REJECTED">⛔ Reject – pending investigation</button>' : ''}`
+    : '<button type="button" class="btn secondary" data-ctl="HOLD">⏸ Place on hold</button> <button type="button" class="btn danger" data-ctl="REJECTED">⛔ Reject – pending investigation</button>'}</p>
+        </form>
+      </div>` : ''}
       ${canAdd ? `
       <div class="card">
         <h3>Record a handling event</h3>
@@ -407,6 +428,17 @@
           </li>`).join('')}</ol>
       </div>`;
     loadQr(b.batch_code);
+    const ctl = $('#ctl-form');
+    if (ctl) {
+      const ask = { HOLD: 'Place this consignment on hold?', REJECTED: 'REJECT this consignment? It will stop here pending investigation.', RESUMED: 'Resume movement of this consignment?' };
+      const done = { HOLD: 'Consignment placed on hold', REJECTED: 'Consignment rejected — pending investigation', RESUMED: 'Consignment resumed' };
+      ctl.querySelectorAll('[data-ctl]').forEach((btn) => btn.addEventListener('click', () => {
+        if (!ctl.reportValidity()) return;
+        const type = btn.dataset.ctl;
+        if (!confirm(ask[type])) return;
+        submitEvent(b.batch_code, { event_type: type, location: $('#ctl-loc').value, notes: $('#ctl-n').value }, done[type]);
+      }));
+    }
     const form = $('#ev-form');
     if (form) {
       const toggleW = () => { $('#ev-w-wrap').classList.toggle('hidden', !['WEIGHBRIDGE'].includes($('#ev-type').value) && $('#ev-w').value === ''); };
@@ -422,8 +454,8 @@
     } catch (e) { /* QR unavailable offline */ }
   }
 
-  async function submitEvent(code) {
-    const payload = {
+  async function submitEvent(code, over, doneMsg) {
+    const payload = over ? Object.assign({ occurred_at: new Date().toISOString(), client_ref: uuid() }, over) : {
       event_type: $('#ev-type').value, location: $('#ev-loc').value, notes: $('#ev-n').value,
       weight_kg: $('#ev-w').value || undefined, occurred_at: new Date().toISOString(), client_ref: uuid(),
     };
@@ -431,7 +463,7 @@
     if (!navigator.onLine) return queue();
     try {
       const r = await api('POST', '/api/batches/' + encodeURIComponent(code) + '/events', payload);
-      toast(r.flagged ? 'Recorded — weight discrepancy flagged' : 'Event appended to the chain'); route();
+      toast(doneMsg || (r.flagged ? 'Recorded — weight discrepancy flagged' : 'Event appended to the chain')); route();
     } catch (err) {
       if (err instanceof TypeError) return queue(); // network failure
       toast(err.message);

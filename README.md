@@ -14,7 +14,7 @@ Working prototype for the ICT431 capstone proposal *"Secure Cloud for Mineral Pr
 | QR codes | `qrcode` (generation) and `html5-qrcode` (browser camera scanning) |
 | Security | JWT (signature, issuer, audience, expiry, algorithm checked), RBAC, SHA-256 hash chain, HTTPS/TLS at the host, Helmet, rate limiting, bcrypt |
 | Hosting | Render blueprint included (`render.yaml`); works on Railway/AWS too |
-| Testing | Jest + Supertest (67 tests), Postman collection |
+| Testing | Jest + Supertest (92 tests), Postman collection |
 | Version control | Git / GitHub (`.gitignore` included) |
 
 ## Quick start (zero setup)
@@ -39,6 +39,16 @@ npm start
 ```
 
 The schema is created automatically on start. With a `DATABASE_URL` the demo data is *not* loaded unless `SEED_DEMO=true`. For a clean first administrator, set `ADMIN_USERNAME` and `ADMIN_PASSWORD` (12+ chars) on the first boot.
+
+## Rejecting, holding and resuming a consignment
+
+On a consignment's page, **System Administrators, Inspection yard, Border and Weighbridge officers** (and nobody else) get a *Consignment controls* panel:
+
+- **Reject – pending investigation** stops a consignment that looks tampered with. Status becomes *Rejected*.
+- **Place on hold** is a temporary stop. Status becomes *On hold*. A hold can be escalated to a rejection.
+- **Resume movement** is available once the issue is resolved, from either state. The consignment returns to the stage it was at when stopped.
+
+While a consignment is on hold or rejected, every other event (inspection, checkpoint, weighbridge reading, export permit, shipping and so on) is refused for every role, including administrators. A written reason (stop) or resolution note (resume) of at least 5 characters is mandatory. Each of these is a hash-chained event (`HOLD`, `REJECTED`, `RESUMED`), so who stopped or released a consignment, when and why can never be edited; the stage to return to is stored inside the hashed event, so forging it is detected by chain verification. Stopped consignments show in red on the dashboard map and in the stats. The public verification portal shows the stop prominently (but not the private reason). Border posts and ports only see stopped consignments that had already left the mine.
 
 ## Consignment map and navigation
 

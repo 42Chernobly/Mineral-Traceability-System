@@ -58,6 +58,7 @@ function batchView(b) {
     destination: b.destination,
     status: b.status,
     flagged: b.flagged,
+    resume_status: b.resume_status || null,
     event_count: b.event_count,
     head_hash: b.head_hash,
     created_at: b.created_at,
@@ -90,13 +91,19 @@ const BATCH_SELECT = `
   JOIN users p ON p.id = b.producer_id
   LEFT JOIN users y ON y.id = b.buyer_id`;
 
+/** A stopped consignment stays visible to border posts / ports only if it was already on the move when stopped. */
+function outboundVisible(b) {
+  if (P.HELD_STATUSES.includes(b.status)) return P.OUTBOUND_STATUSES.includes(b.resume_status);
+  return P.OUTBOUND_STATUSES.includes(b.status);
+}
+
 function canView(user, b) {
   if (P.GLOBAL_VIEW_ROLES.includes(user.role)) return true;
   // Every operator at the same mine shares that mine's batches (and only that mine's).
   if (user.role === 'mine') return b.producer_id === user.id || (!!user.stop_id && b.producer_stop_id === user.stop_id);
   if (user.role === 'buyer') return b.buyer_id === user.id;
   // Border posts and ports (often in another country) only see consignments already on the move.
-  if (P.OUTBOUND_VIEW_ROLES.includes(user.role)) return P.OUTBOUND_STATUSES.includes(b.status);
+  if (P.OUTBOUND_VIEW_ROLES.includes(user.role)) return outboundVisible(b);
   return false;
 }
 
@@ -181,14 +188,49 @@ async function createBatch(user, input, opts = {}) {
  * and readers never observe an event without its matching head/count update.
  * The batch status is re-checked under the lock (the caller's check may be stale).
  */
+/** Why `type` cannot be recorded while the batch is in `status` (null when it can). */
+function stateError(type, status) {
+  const rule = P.EVENT_RULES[type];
+  if (P.CLOSED_STATUSES.includes(status)) return 'Batch chain of custody is closed (received by buyer)';
+  if (P.HELD_STATUSES.includes(status) && !rule.from.includes(status)) {
+    return `This consignment is ${status === 'rejected' ? 'REJECTED and under investigation' : 'ON HOLD'}: it cannot move further until it is resumed by an administrator, inspector, border or weighbridge officer`;
+  }
+  if (!rule.from.includes(status)) return `${type} cannot follow status "${status}"`;
+  return null;
+}
+
+/** The status a stopped consignment returns to, read from its latest hold / reject event. */
+async function lastResumeStatus(q, batchId) {
+  const { rows } = await q("SELECT details FROM events WHERE batch_id = $1 AND event_type IN ('HOLD','REJECTED') ORDER BY seq DESC LIMIT 1", [batchId]);
+  let d = rows.length ? rows[0].details : null;
+  if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = null; } }
+  const back = d && d.resume_status;
+  return P.ACTIVE_STATUSES.includes(back) ? back : 'in_transit';
+}
+
 async function commitEvent(batch, user, ev) {
   const rule = P.EVENT_RULES[ev.event_type];
   return db.tx(async (q) => {
     await q('UPDATE batches SET event_count = event_count WHERE id = $1', [batch.id]); // row lock
-    const { rows: cur } = await q('SELECT status, flagged FROM batches WHERE id = $1', [batch.id]);
+    const { rows: cur } = await q('SELECT status, flagged, resume_status FROM batches WHERE id = $1', [batch.id]);
     if (rule.from) {
-      if (P.CLOSED_STATUSES.includes(cur[0].status)) throw new HttpError(409, 'Batch chain of custody is closed (received by buyer)');
-      if (!rule.from.includes(cur[0].status)) throw new HttpError(409, `${ev.event_type} cannot follow status "${cur[0].status}"`);
+      const bad = stateError(ev.event_type, cur[0].status);
+      if (bad) throw new HttpError(409, bad);
+    }
+    // Hold / reject remember where the consignment was; resume goes back there. The value is written into
+    // the (hashed) event itself, so it cannot be changed afterwards without breaking the chain.
+    let details = ev.details || {};
+    let nextStatus = rule.status;
+    let resumeCol; // undefined = leave unchanged
+    if (rule.holds) {
+      const back = P.HELD_STATUSES.includes(cur[0].status) ? await lastResumeStatus(q, batch.id) : cur[0].status;
+      details = { ...details, resume_status: back };
+      resumeCol = back;
+    } else if (rule.resumes) {
+      const back = await lastResumeStatus(q, batch.id);
+      details = { ...details, resumed_to: back };
+      nextStatus = back;
+      resumeCol = null;
     }
     const { rows: last } = await q('SELECT seq, hash FROM events WHERE batch_id = $1 ORDER BY seq DESC LIMIT 1', [batch.id]);
     const seq = last.length ? last[0].seq + 1 : 1;
@@ -202,7 +244,7 @@ async function commitEvent(batch, user, ev) {
       actor_org: user.organisation,
       weight_kg: ev.weight_kg,
       notes: ev.notes,
-      details: ev.details,
+      details,
       occurred_at: ev.occurred_at,
     };
     const hash = chain.computeEventHash(batch.batch_code, record, prevHash);
@@ -212,14 +254,16 @@ async function commitEvent(batch, user, ev) {
           weight_kg, notes, details, occurred_at, offline, client_ref, prev_hash, hash)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
       [batch.id, seq, record.event_type, record.location, user.id, user.role, user.organisation,
-        record.weight_kg, record.notes, JSON.stringify(record.details), record.occurred_at,
+        record.weight_kg, record.notes, JSON.stringify(details), record.occurred_at,
         !!ev.offline, ev.client_ref || null, prevHash, hash]
     );
     const row = rows[0];
-    const status = rule.status || cur[0].status;
-    const flagged = cur[0].flagged || !!(ev.details && ev.details.weight_discrepancy);
-    await q('UPDATE batches SET head_hash=$1, event_count=$2, status=$3, flagged=$4 WHERE id=$5', [row.hash, row.seq, status, flagged, batch.id]);
+    const status = nextStatus || cur[0].status;
+    const flagged = cur[0].flagged || !!(details && details.weight_discrepancy);
+    const resumeStatus = resumeCol === undefined ? cur[0].resume_status : resumeCol;
+    await q('UPDATE batches SET head_hash=$1, event_count=$2, status=$3, flagged=$4, resume_status=$5 WHERE id=$6', [row.hash, row.seq, status, flagged, resumeStatus || null, batch.id]);
     batch.status = status;
+    batch.resume_status = resumeStatus || null;
     batch.flagged = flagged;
     batch.head_hash = row.hash;
     batch.event_count = row.seq;
@@ -243,14 +287,13 @@ async function addEvent(user, code, input, opts = {}) {
   const rule = P.EVENT_RULES[type];
   if (!rule || type === 'REGISTERED') throw new HttpError(400, `event_type must be one of: ${P.EVENT_TYPES.filter((t) => t !== 'REGISTERED').join(', ')}`);
   if (!rule.roles.includes(user.role)) throw new HttpError(403, `Role "${user.role}" may not record ${type} events`);
-  if (P.CLOSED_STATUSES.includes(batch.status)) throw new HttpError(409, 'Batch chain of custody is closed (received by buyer)');
-  if (!rule.from.includes(batch.status)) {
-    throw new HttpError(409, `${type} cannot follow status "${batch.status}"`);
-  }
+  const stateProblem = stateError(type, batch.status);
+  if (stateProblem) throw new HttpError(409, stateProblem);
 
   // Someone signed up at a stop records everything as happening at that stop; it cannot be typed over.
   const location = user.stop_name ? user.stop_name : cleanText(input.location, 120, 'location');
   const notes = cleanText(input.notes, 500, 'notes', false);
+  if (rule.reason && notes.length < 5) throw new HttpError(400, 'A reason is required (at least 5 characters) when stopping or resuming a consignment');
   const needsWeight = type === 'WEIGHBRIDGE';
   const weight = parseWeight(input.weight_kg, 'weight_kg', needsWeight);
   const occurredAt = parseOccurredAt(input.occurred_at);
@@ -294,7 +337,9 @@ async function listBatches(user, { status, q } = {}) {
   } else if (user.role === 'buyer') { params.push(user.id); where.push(`b.buyer_id = $${params.length}`); }
   else if (P.OUTBOUND_VIEW_ROLES.includes(user.role)) {
     const marks = P.OUTBOUND_STATUSES.map((s) => { params.push(s); return `$${params.length}`; });
-    where.push(`b.status IN (${marks.join(',')})`);
+    const resumeMarks = P.OUTBOUND_STATUSES.map((s) => { params.push(s); return `$${params.length}`; });
+    const held = P.HELD_STATUSES.map((s) => { params.push(s); return `$${params.length}`; });
+    where.push(`(b.status IN (${marks.join(',')}) OR (b.status IN (${held.join(',')}) AND b.resume_status IN (${resumeMarks.join(',')})))`);
   } else if (!P.GLOBAL_VIEW_ROLES.includes(user.role)) where.push('1=0');
   if (status) { params.push(status); where.push(`b.status = $${params.length}`); }
   if (q) { params.push('%' + String(q).toUpperCase() + '%'); where.push(`UPPER(b.batch_code) LIKE $${params.length}`); }

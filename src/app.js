@@ -158,7 +158,7 @@ function createApp() {
   }));
 
   app.get('/api/meta', wrap(async (req, res) => {
-    const eventTypes = P.EVENT_TYPES.filter((t) => t !== 'REGISTERED' && P.EVENT_RULES[t].roles.includes(req.user.role))
+    const eventTypes = P.EVENT_TYPES.filter((t) => t !== 'REGISTERED' && !P.CONTROL_EVENTS.includes(t) && P.EVENT_RULES[t].roles.includes(req.user.role))
       .map((t) => ({ type: t, label: P.EVENT_RULES[t].label }));
     let buyers = [];
     if (['mine', 'admin'].includes(req.user.role)) {
@@ -172,6 +172,7 @@ function createApp() {
       buyers,
       can_register: ['mine', 'admin'].includes(req.user.role),
       can_audit: ['regulator', 'admin'].includes(req.user.role),
+      can_hold: P.HOLD_ROLES.includes(req.user.role),
       tamper_demo: config.enableTamperDemo && req.user.role === 'admin',
       map: { tile_url: config.map.tileUrl, tile_url_dark: config.map.tileUrlDark, attribution: config.map.attribution, subdomains: config.map.subdomains },
       stop: req.user.stop_name ? { name: req.user.stop_name, country: req.user.stop_country, region: req.user.stop_region } : null,

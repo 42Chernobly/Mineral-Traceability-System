@@ -41,7 +41,8 @@ async function upgrade() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(12) NOT NULL DEFAULT 'active';
       ALTER TABLE users ADD COLUMN IF NOT EXISTS contact VARCHAR(120);
       ALTER TABLE stops ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
-      ALTER TABLE stops ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;`);
+      ALTER TABLE stops ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+      ALTER TABLE batches ADD COLUMN IF NOT EXISTS resume_status VARCHAR(20);`);
   }
   await pool.query('CREATE INDEX IF NOT EXISTS idx_users_stop ON users (stop_id)');
 }

@@ -110,6 +110,7 @@ header.top nav .who .btn.secondary { color: var(--brand) !important; border-colo
 .pin.s-moving { background: var(--brand); }
 .pin.s-exported { background: var(--accent); }
 .pin.s-delivered { background: var(--ink); }
+.pin.s-held { background: var(--bad); }
 .pin.flag { box-shadow: 0 0 0 3px var(--bad); }
 .pin-dest { width: 12px; height: 12px; border-radius: 2px; background: var(--surface); border: 2px solid var(--ink); }
 .leaflet-container { font: inherit; background: var(--bg); }

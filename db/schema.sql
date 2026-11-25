@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS batches (
   grade          VARCHAR(60),
   destination    VARCHAR(120),
   status         VARCHAR(20)  NOT NULL DEFAULT 'registered',
+  resume_status  VARCHAR(20),                              -- while on hold / rejected: the status to return to on resume
   flagged        BOOLEAN      NOT NULL DEFAULT FALSE,
   head_hash      VARCHAR(64)  NOT NULL,
   event_count    INTEGER      NOT NULL DEFAULT 0,
