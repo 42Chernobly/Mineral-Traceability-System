@@ -22,7 +22,7 @@ services:
         value: "true"          # set to false for real use
       - key: BASE_URL
         sync: false
-      # Basemap tiles: default is CARTO (no key). To switch provider, add TILE_URL / TILE_URL_DARK /
+      # Basemap tiles: default is OpenStreetMap (no key). To switch provider, add TILE_URL / TILE_URL_DARK /
       # TILE_ATTRIBUTION in the Render dashboard (see .env.example).            # e.g. https://mineral-traceability.onrender.com
 databases:
   - name: mineral-db

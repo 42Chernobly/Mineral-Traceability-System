@@ -13,18 +13,15 @@ function secret(name) {
   return crypto.randomBytes(48).toString('hex');
 }
 
-// Map basemap. The default (CARTO) is designed for applications and has matching light and dark styles.
-// OpenStreetMap's own tile server (tile.openstreetmap.org) is NOT suitable for a deployed app: its usage
-// policy blocks apps that don't meet its conditions, which shows as "Access blocked" tiles.
-// Override with TILE_URL (and optionally TILE_URL_DARK, TILE_ATTRIBUTION, TILE_SUBDOMAINS) to use another
-// provider, e.g. MapTiler or Stadia Maps with your own API key.
-const tileUrl = process.env.TILE_URL || 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-const tileUrlDark = process.env.TILE_URL
-  ? process.env.TILE_URL_DARK || ''
-  : process.env.TILE_URL_DARK || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-const tileAttribution = process.env.TILE_ATTRIBUTION || (process.env.TILE_URL
-  ? '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
-  : '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>');
+// Map basemap. Default: OpenStreetMap's standard tiles. They work for a low-traffic app as long as every
+// request carries a Referer (see referrerPolicy in app.js) and the attribution is shown. The OSM tile policy
+// forbids heavy use and bulk downloading; for a busy or commercial deployment use a keyed provider instead.
+// Override with TILE_URL (and optionally TILE_URL_DARK, TILE_ATTRIBUTION, TILE_SUBDOMAINS), e.g. MapTiler or
+// Stadia Maps with your own API key. Note: CARTO's basemaps now require an API key too.
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+const tileUrl = process.env.TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const tileUrlDark = process.env.TILE_URL_DARK || ''; // empty: the light tiles are darkened with CSS in dark mode
+const tileAttribution = process.env.TILE_ATTRIBUTION || OSM_ATTRIBUTION;
 
 /** CSP img-src entries for a tile URL template: {s} becomes a wildcard subdomain. */
 function tileOrigin(template) {
@@ -43,7 +40,7 @@ module.exports = {
     tileUrl,
     tileUrlDark,
     attribution: tileAttribution,
-    subdomains: process.env.TILE_SUBDOMAINS || 'abcd',
+    subdomains: process.env.TILE_SUBDOMAINS || 'abc',
     imgOrigins: [...new Set([tileOrigin(tileUrl), tileOrigin(tileUrlDark)].filter(Boolean))],
   },
   port: parseInt(process.env.PORT || '3000', 10),

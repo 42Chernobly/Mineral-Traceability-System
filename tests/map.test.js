@@ -27,8 +27,7 @@ describe('security headers', () => {
   test('CSP lets the map load OpenStreetMap tiles (bare host) but nothing else external for images', async () => {
     const csp = (await request(app).get('/')).headers['content-security-policy'];
     const img = csp.split(';').map((x) => x.trim()).find((x) => x.startsWith('img-src'));
-    expect(img).toContain('https://*.basemaps.cartocdn.com'); // default provider, not tile.openstreetmap.org
-    expect(img).not.toContain('tile.openstreetmap.org');
+    expect(img).toContain('https://tile.openstreetmap.org');
     expect(img).not.toMatch(/(^| )\*( |$)/); // no bare wildcard source
     expect((await request(app).get('/')).headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
     expect(csp).toMatch(/script-src 'self' https:\/\/unpkg.com/);

@@ -188,6 +188,7 @@
         </div>
         <div id="cmap" role="region" aria-label="Map of consignment movement. The table below lists the same consignments with their last recorded location."></div>
         <div class="map-legend" id="map-legend"></div>
+        <p class="small map-note" id="map-warn" role="alert" hidden style="color:var(--bad)">The map background could not be loaded (the tile provider refused or is unreachable). Consignment routes and the table are unaffected. An administrator can change the provider with the TILE_URL setting.</p>
         <p class="small muted map-note" id="map-note"></p>
       </div>
       <div class="card">
@@ -231,13 +232,22 @@
   const DEFAULT_VIEW = [[-17.5, 20], 5]; // Zambia / Namibia corridor when nothing is plotted yet
 
   const isDark = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)); };
-  let baseLayer = null;
+  let baseLayer = null; let tilesOk = 0; let tilesBad = 0;
   function setBasemap() {
     const m = (meta && meta.map) || {};
     if (!cmap || !m.tile_url) return;
     const dark = isDark() && !!m.tile_url_dark;
     if (baseLayer) cmap.removeLayer(baseLayer);
-    baseLayer = L.tileLayer(dark ? m.tile_url_dark : m.tile_url, { maxZoom: 19, subdomains: m.subdomains || 'abc', attribution: m.attribution || '' }).addTo(cmap);
+    tilesOk = 0; tilesBad = 0;
+    baseLayer = L.tileLayer(dark ? m.tile_url_dark : m.tile_url, {
+      maxZoom: 19, subdomains: m.subdomains || 'abc', attribution: m.attribution || '',
+      referrerPolicy: 'strict-origin-when-cross-origin', // tile providers (OSM) require to know which site is asking
+    }).addTo(cmap);
+    baseLayer.on('tileload', () => { tilesOk++; });
+    baseLayer.on('tileerror', () => {
+      tilesBad++;
+      if (tilesBad >= 4 && !tilesOk) { const n = $('#map-warn'); if (n) n.hidden = false; }
+    });
     baseLayer.bringToBack();
     // a provider with no dark style falls back to darkening the light one with CSS
     $('#cmap').classList.toggle('tiles-invert', isDark() && !m.tile_url_dark);
