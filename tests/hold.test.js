@@ -36,14 +36,14 @@ beforeAll(async () => {
 afterAll(async () => { await db.close(); });
 
 describe('who may stop and resume a consignment', () => {
-  test.each(['admin', 'insp_ndola', 'border_katima', 'wb_kitwe'])('%s can reject a consignment', async (u) => {
+  test.each(['admin', 'insp_ndola', 'border_katima', 'wb_kitwe', 'reg_zra'])('%s can reject a consignment', async (u) => {
     const code = await newBatch();
     const r = await reject(u, code);
     expect(r.status).toBe(201);
     expect((await detail('admin', code)).batch.status).toBe('rejected');
   });
 
-  test.each(['admin', 'insp_ndola', 'border_katima', 'wb_kitwe'])('%s can place on hold and resume', async (u) => {
+  test.each(['admin', 'insp_ndola', 'border_katima', 'wb_kitwe', 'reg_zra'])('%s can place on hold and resume', async (u) => {
     const code = await newBatch();
     expect((await ev(u, code, { event_type: 'HOLD', location: 'Checkpoint', notes: 'Paperwork query' })).status).toBe(201);
     expect((await detail('admin', code)).batch.status).toBe('on_hold');
@@ -51,7 +51,7 @@ describe('who may stop and resume a consignment', () => {
     expect((await detail('admin', code)).batch.status).toBe('in_transit');
   });
 
-  test.each(['mine_solwezi', 'trans_copperbelt', 'reg_zra', 'port_walvis', 'buyer_alpine'])('%s cannot reject, hold or resume', async (u) => {
+  test.each(['mine_solwezi', 'trans_copperbelt', 'port_walvis', 'buyer_alpine'])('%s cannot reject, hold or resume', async (u) => {
     const code = await newBatch();
     for (const type of ['REJECTED', 'HOLD', 'RESUMED']) {
       const r = await ev(u, code, { event_type: type, location: 'Anywhere', notes: 'Trying it on' });
@@ -62,8 +62,8 @@ describe('who may stop and resume a consignment', () => {
 
   test('the UI is told who gets the controls, and they are not in the ordinary event list', async () => {
     const meta = async (u) => (await request(app).get('/api/meta').set(as(u))).body;
-    for (const u of ['admin', 'insp_ndola', 'border_katima', 'wb_kitwe']) expect((await meta(u)).can_hold).toBe(true);
-    for (const u of ['mine_solwezi', 'trans_copperbelt', 'reg_zra', 'port_walvis', 'buyer_alpine']) expect((await meta(u)).can_hold).toBe(false);
+    for (const u of ['admin', 'insp_ndola', 'border_katima', 'wb_kitwe', 'reg_zra']) expect((await meta(u)).can_hold).toBe(true);
+    for (const u of ['mine_solwezi', 'trans_copperbelt', 'port_walvis', 'buyer_alpine']) expect((await meta(u)).can_hold).toBe(false);
     const types = (await meta('admin')).event_types.map((t) => t.type);
     expect(types).not.toEqual(expect.arrayContaining(['HOLD']));
     expect(types).not.toContain('REJECTED');
@@ -78,7 +78,7 @@ describe('a stopped consignment cannot go any further', () => {
     const attempts = [
       ['admin', { event_type: 'INSPECTED' }], ['admin', { event_type: 'CHECKPOINT' }], ['admin', { event_type: 'DISPATCHED' }],
       ['admin', { event_type: 'WEIGHBRIDGE', weight_kg: 10 }], ['insp_ndola', { event_type: 'INSPECTED' }],
-      ['reg_zra', { event_type: 'EXPORT_APPROVED' }], ['border_katima', { event_type: 'CHECKPOINT' }],
+      ['reg_zra', { event_type: 'EXPORT_APPROVED' }], ['reg_zra', { event_type: 'INSPECTED' }], ['border_katima', { event_type: 'CHECKPOINT' }],
     ];
     for (const [u, body] of attempts) {
       const r = await ev(u, code, { location: 'Somewhere', ...body });

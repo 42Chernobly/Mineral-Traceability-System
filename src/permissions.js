@@ -27,7 +27,7 @@ const STOP_TYPES = {
 const SELF_SIGNUP_ROLES = Object.values(STOP_TYPES).map((t) => t.role);
 
 // Stop / hold controls. Only these roles can stop a consignment or let it continue.
-const HOLD_ROLES = ['admin', 'inspector', 'border', 'weighbridge'];
+const HOLD_ROLES = ['admin', 'inspector', 'border', 'weighbridge', 'regulator'];
 // Statuses in which a consignment is stopped. Nothing else can be recorded until it is resumed.
 const HELD_STATUSES = ['on_hold', 'rejected'];
 // Statuses a consignment can be stopped from (anything still in the chain of custody).

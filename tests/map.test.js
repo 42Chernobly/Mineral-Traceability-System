@@ -125,3 +125,43 @@ describe('stop coordinates', () => {
     expect(r.body.stop.latitude).toBeNull();
   });
 });
+
+describe('GET /api/public/demo-accounts', () => {
+  const config = require('../src/config');
+  const get = () => request(app).get('/api/public/demo-accounts');
+
+  test('lists the demo accounts and every new account, without any secrets', async () => {
+    const created = await request(app).post('/api/users').set(as('admin')).send({ username: 'brand.new', password: 'Str0ngPass!', role: 'inspector', full_name: 'Brand New', organisation: 'Fresh Org' });
+    expect(created.status).toBe(201);
+    const stops = (await request(app).get('/api/public/stops')).body.stops;
+    const su = await request(app).post('/api/auth/signup').send({ username: 'wants.in', password: 'Sup3rSecret!', full_name: 'Wants In', organisation: 'Org', stop_id: stops[0].id, contact: 'secret@contact.example' });
+    expect(su.status).toBe(201);
+
+    const r = await get();
+    expect(r.status).toBe(200);
+    expect(r.body.enabled).toBe(true);
+    const by = Object.fromEntries(r.body.accounts.map((a) => [a.username, a]));
+    expect(by.admin.kind).toBe('demo');
+    expect(by.border_katima.kind).toBe('demo');
+    expect(by['brand.new']).toMatchObject({ kind: 'new', pending: false, role_label: 'Inspector' });
+    expect(by['wants.in']).toMatchObject({ kind: 'new', pending: true });
+    expect(r.body.demo_password).toBe(DEMO_PASSWORD);
+    const s = JSON.stringify(r.body);
+    expect(s).not.toMatch(/Str0ngPass|Sup3rSecret|secret@contact|password_hash|\$2[aby]\$/);
+  });
+
+  test('disabled accounts are not listed', async () => {
+    const id = (await request(app).get('/api/users').set(as('admin'))).body.users.find((u) => u.username === 'brand.new').id;
+    await request(app).patch(`/api/users/${id}/active`).set(as("admin")).send({ active: false });
+    const names = (await get()).body.accounts.map((a) => a.username);
+    expect(names).not.toContain('brand.new');
+  });
+
+  test('outside demo mode nothing is published', async () => {
+    config.seedDemo = false;
+    try {
+      const r = await get();
+      expect(r.body).toEqual({ enabled: false, accounts: [] });
+    } finally { config.seedDemo = true; }
+  });
+});

@@ -11,6 +11,7 @@ const accounts = require('./accounts');
 const qr = require('./qr');
 const chain = require('./hashchain');
 const P = require('./permissions');
+const { USERS: DEMO_USERS, DEMO_PASSWORD } = require('./seed');
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
@@ -100,6 +101,25 @@ function createApp() {
 
   app.get('/api/public/stops', publicLimiter, wrap(async (req, res) => {
     res.json({ stops: await accounts.listStops({ onlyActive: true }) });
+  }));
+
+  // Sign-in helper for demo deployments: lists every account on the system (including newly created and
+  // awaiting-approval ones). Only available in demo mode (SEED_DEMO); a real deployment never publishes
+  // its account names. Passwords are never returned for real accounts: only the shared demo password,
+  // and only for the seeded demo accounts.
+  app.get('/api/public/demo-accounts', publicLimiter, wrap(async (req, res) => {
+    if (!config.seedDemo) return res.json({ enabled: false, accounts: [] });
+    const { rows } = await db.query(
+      "SELECT username, organisation, role, status FROM users WHERE active AND status IN ('active','pending') ORDER BY id");
+    const demoNames = DEMO_USERS.map((u) => u[0]);
+    const accountsOut = rows.map((u) => ({
+      username: u.username,
+      role_label: P.ROLE_LABELS[u.role] || u.role,
+      organisation: u.organisation,
+      kind: demoNames.includes(u.username) ? 'demo' : 'new',
+      pending: u.status === 'pending',
+    }));
+    res.json({ enabled: true, demo_password: DEMO_PASSWORD, accounts: accountsOut });
   }));
 
   app.post('/api/auth/signup', signupLimiter, wrap(async (req, res) => {

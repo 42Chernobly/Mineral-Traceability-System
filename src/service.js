@@ -193,7 +193,7 @@ function stateError(type, status) {
   const rule = P.EVENT_RULES[type];
   if (P.CLOSED_STATUSES.includes(status)) return 'Batch chain of custody is closed (received by buyer)';
   if (P.HELD_STATUSES.includes(status) && !rule.from.includes(status)) {
-    return `This consignment is ${status === 'rejected' ? 'REJECTED and under investigation' : 'ON HOLD'}: it cannot move further until it is resumed by an administrator, inspector, border or weighbridge officer`;
+    return `This consignment is ${status === 'rejected' ? 'REJECTED and under investigation' : 'ON HOLD'}: it cannot move further until it is resumed by an administrator, inspector, border, weighbridge or regulator officer`;
   }
   if (!rule.from.includes(status)) return `${type} cannot follow status "${status}"`;
   return null;

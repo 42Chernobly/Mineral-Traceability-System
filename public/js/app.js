@@ -65,9 +65,23 @@
   function showLogin() {
     stopScanner(); destroyMap(); me = null; meta = null;
     $('#app-view').classList.add('hidden'); applyAuthRoute();
-    const accounts = ['admin', 'mine_solwezi', 'wb_kitwe', 'insp_ndola', 'reg_zra', 'border_katima', 'wb_katima', 'port_walvis', 'buyer_alpine'];
-    $('#demo-accounts').innerHTML = 'Demo accounts (simulated data, password <b>Demo@12345</b>): ' +
-      accounts.map((a) => `<button type="button" data-u="${a}">${a}</button>`).join(' · ');
+    loadDemoAccounts();
+  }
+  // Every account on the system (demo and newly created), listed live. Server-side this is demo mode only.
+  let demoPassword = '';
+  async function loadDemoAccounts() {
+    const box = $('#demo-accounts'); box.innerHTML = '';
+    let d;
+    try { d = await (await fetch('/api/public/demo-accounts')).json(); } catch (e) { return; }
+    if (!d || !d.enabled || !d.accounts.length) return;
+    demoPassword = d.demo_password || '';
+    const btn = (a) => `<button type="button" data-u="${esc(a.username)}" data-kind="${a.kind}" title="${esc(a.role_label)} — ${esc(a.organisation)}">${esc(a.username)}</button>` +
+      `<span class="small"> ${esc(a.role_label)}${a.pending ? ' · <b>awaiting approval</b>' : ''}</span>`;
+    const demo = d.accounts.filter((a) => a.kind === 'demo');
+    const other = d.accounts.filter((a) => a.kind !== 'demo');
+    box.innerHTML = `<details open><summary>Accounts on this system (${d.accounts.length}) — click one to fill in the sign-in form</summary>
+      <p><b>Demo accounts</b> (simulated data, password <b>${esc(demoPassword)}</b>):<br>${demo.map(btn).join('<br>')}</p>
+      ${other.length ? `<p><b>Newly created accounts</b> (they use the password chosen when they were created):<br>${other.map(btn).join('<br>')}</p>` : ''}</details>`;
   }
   // Sign-in and sign-up share the signed-out screen; #/signup/<stopId> is the link for one stop.
   function applyAuthRoute() {
@@ -111,7 +125,8 @@
   $('#logout').addEventListener('click', logout);
   $('#demo-accounts').addEventListener('click', (e) => {
     const u = e.target.dataset && e.target.dataset.u; if (!u) return;
-    $('#username').value = u; $('#password').value = 'Demo@12345';
+    $('#username').value = u; $('#password').value = e.target.dataset.kind === 'demo' ? demoPassword : '';
+    if (e.target.dataset.kind !== 'demo') $('#password').focus();
   });
   $('#login-form').addEventListener('submit', async (e) => {
     e.preventDefault(); $('#login-error').textContent = '';

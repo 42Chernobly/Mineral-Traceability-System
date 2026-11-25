@@ -14,7 +14,7 @@ Working prototype for the ICT431 capstone proposal *"Secure Cloud for Mineral Pr
 | QR codes | `qrcode` (generation) and `html5-qrcode` (browser camera scanning) |
 | Security | JWT (signature, issuer, audience, expiry, algorithm checked), RBAC, SHA-256 hash chain, HTTPS/TLS at the host, Helmet, rate limiting, bcrypt |
 | Hosting | Render blueprint included (`render.yaml`); works on Railway/AWS too |
-| Testing | Jest + Supertest (92 tests), Postman collection |
+| Testing | Jest + Supertest (96 tests), Postman collection |
 | Version control | Git / GitHub (`.gitignore` included) |
 
 ## Quick start (zero setup)
@@ -40,9 +40,13 @@ npm start
 
 The schema is created automatically on start. With a `DATABASE_URL` the demo data is *not* loaded unless `SEED_DEMO=true`. For a clean first administrator, set `ADMIN_USERNAME` and `ADMIN_PASSWORD` (12+ chars) on the first boot.
 
+## Accounts list on the sign-in page (demo mode only)
+
+When `SEED_DEMO=true`, the sign-in page lists every account on the system, live: the seeded demo accounts (click one to fill in the shared demo password) and every newly created or sign-up account (marked *awaiting approval* until an administrator approves it; clicking one fills in only the username, since it has its own password). Disabled accounts are not listed, and no passwords, contacts or hashes other than the shared demo password are ever returned. With `SEED_DEMO=false` (real use) the endpoint publishes nothing and the list does not appear.
+
 ## Rejecting, holding and resuming a consignment
 
-On a consignment's page, **System Administrators, Inspection yard, Border and Weighbridge officers** (and nobody else) get a *Consignment controls* panel:
+On a consignment's page, **System Administrators, Inspection yard, Border, Weighbridge and Regulator officers** (and nobody else) get a *Consignment controls* panel:
 
 - **Reject – pending investigation** stops a consignment that looks tampered with. Status becomes *Rejected*.
 - **Place on hold** is a temporary stop. Status becomes *On hold*. A hold can be escalated to a rejection.
