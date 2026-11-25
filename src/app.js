@@ -27,7 +27,7 @@ function createApp() {
           scriptSrc: ["'self'", 'https://unpkg.com'],
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-          imgSrc: ["'self'", 'data:', 'blob:', 'https://tile.openstreetmap.org', 'https://*.tile.openstreetmap.org'], // map tiles (bare host is what the map requests)
+          imgSrc: ["'self'", 'data:', 'blob:', ...config.map.imgOrigins], // basemap tiles come from the configured provider only
           connectSrc: ["'self'"],
           mediaSrc: ["'self'", 'blob:'],
           objectSrc: ["'none'"],
@@ -35,6 +35,8 @@ function createApp() {
           upgradeInsecureRequests: config.isProd ? [] : null,
         },
       },
+      // Tile providers expect to see which site is asking; Helmet's default (no-referrer) hides that.
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       hsts: config.isProd ? undefined : false, // HSTS only when served over HTTPS in production
     })
   );
@@ -171,6 +173,7 @@ function createApp() {
       can_register: ['mine', 'admin'].includes(req.user.role),
       can_audit: ['regulator', 'admin'].includes(req.user.role),
       tamper_demo: config.enableTamperDemo && req.user.role === 'admin',
+      map: { tile_url: config.map.tileUrl, tile_url_dark: config.map.tileUrlDark, attribution: config.map.attribution, subdomains: config.map.subdomains },
       stop: req.user.stop_name ? { name: req.user.stop_name, country: req.user.stop_country, region: req.user.stop_region } : null,
     });
   }));

@@ -79,20 +79,18 @@ tr.click { cursor: pointer; } tr.click:hover { background: color-mix(in srgb, va
 .offline-pill { background: var(--warn-bg); color: var(--warn); padding: .15rem .6rem; border-radius: 999px; font-size: .8rem; font-weight: 600; }
 @media (max-width: 600px) { main { padding: .6rem; } header.top .who { text-align: left; } }
 
-/* ---- One navigation menu: links, sync status, user and sign-out all live in the same <nav> ---- */
-header.top nav { align-items: center; }
-header.top nav .nav-links { display: flex; gap: .25rem; flex-wrap: wrap; flex: 1; }
-header.top nav a { display: inline-block; background: transparent; color: inherit; text-decoration: none; padding: .4rem .7rem; border-radius: 6px; cursor: pointer; font: inherit; }
-header.top nav a.active, header.top nav a:hover, header.top nav a[aria-current="page"] { background: rgba(255,255,255,.18); }
-header.top nav a:focus-visible, .nav-toggle:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 1px; }
-.nav-toggle { display: none; margin-left: auto; background: transparent; color: inherit; border: 1px solid rgba(255,255,255,.6); border-radius: 6px; padding: .3rem .7rem; font: inherit; cursor: pointer; }
-@media (max-width: 760px) {
-  .nav-toggle { display: inline-block; }
-  header.top nav { display: none; flex: 1 1 100%; flex-direction: column; align-items: stretch; }
-  header.top.open nav { display: flex; }
-  header.top nav .nav-links { flex-direction: column; flex: none; }
-  header.top nav a { display: block; }
-}
+/* ---- One navigation menu: a single icon that opens a dropdown with every option ---- */
+header.top { position: relative; }
+.nav-toggle { margin-left: auto; background: transparent; color: inherit; border: 1px solid rgba(255,255,255,.6); border-radius: 6px; width: 2.5rem; height: 2.3rem; padding: 0; font: inherit; font-size: 1.35rem; line-height: 1; cursor: pointer; }
+.nav-toggle:hover, header.top.open .nav-toggle { background: rgba(255,255,255,.18); }
+.nav-toggle:focus-visible, header.top nav a:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 1px; }
+header.top nav { display: none; position: absolute; top: calc(100% + 6px); right: 1rem; z-index: 2000; flex: none; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 0; min-width: 240px; max-width: calc(100vw - 2rem); padding: .4rem; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.22); }
+header.top.open nav { display: flex; }
+header.top nav .nav-links { display: flex; flex-direction: column; gap: .1rem; flex: none; }
+header.top nav a { display: block; background: transparent; color: var(--ink); text-decoration: none; padding: .55rem .8rem; border-radius: 6px; cursor: pointer; font: inherit; }
+header.top nav a.active, header.top nav a:hover, header.top nav a[aria-current="page"] { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); }
+header.top nav .who { display: block; margin-top: .4rem; padding: .6rem .8rem .3rem; border-top: 1px solid var(--line); color: var(--muted); text-align: left; }
+header.top nav .who .btn.secondary { color: var(--brand) !important; border-color: var(--brand) !important; }
 
 /* ---- Consignment map (dashboard) ---- */
 .map-card { padding: 0; overflow: hidden; }
@@ -121,7 +119,8 @@ header.top nav a:focus-visible, .nav-toggle:focus-visible { outline: 2px solid v
 .leaflet-bar a, .leaflet-bar a:hover { background-color: var(--surface); color: var(--ink); border-bottom-color: var(--line); }
 .leaflet-container .leaflet-control-attribution { background: color-mix(in srgb, var(--surface) 80%, transparent); color: var(--muted); }
 .leaflet-container .leaflet-control-attribution a { color: var(--muted); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
-}
+/* only used when the configured provider has no dark basemap */
+#cmap.tiles-invert .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
 @media (max-width: 600px) { #cmap { height: 340px; } }
+header.top > .offline-pill { margin-left: auto; }
+header.top > .offline-pill:not(.hidden) + .nav-toggle { margin-left: 0; }

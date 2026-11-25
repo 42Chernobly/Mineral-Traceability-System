@@ -42,11 +42,13 @@ The schema is created automatically on start. With a `DATABASE_URL` the demo dat
 
 ## Consignment map and navigation
 
-The dashboard shows a **Consignment movement** map (Leaflet, self-hosted in `public/js/vendor/leaflet`; base tiles from OpenStreetMap). Each pin is a consignment at its last recorded place, coloured by stage; a red ring marks a weight discrepancy. The solid line is the route recorded so far, the dashed line the remaining leg to the destination hub (schematic, not a road route). The map follows the search/status filters, and obeys the same role-based visibility as the batch list (`GET /api/map/consignments`).
+The dashboard shows a **Consignment movement** map (Leaflet, self-hosted in `public/js/vendor/leaflet`; base tiles from CARTO, with a light and a dark style). Each pin is a consignment at its last recorded place, coloured by stage; a red ring marks a weight discrepancy. The solid line is the route recorded so far, the dashed line the remaining leg to the destination hub (schematic, not a road route). The map follows the search/status filters, and obeys the same role-based visibility as the batch list (`GET /api/map/consignments`).
+
+**Basemap provider.** OpenStreetMap's own tile server blocks deployed apps ("Access blocked" tiles), so the default is CARTO, which needs no key. To use another provider (MapTiler, Stadia Maps, your own), set `TILE_URL`, `TILE_URL_DARK` (optional), `TILE_ATTRIBUTION` in the environment (see `.env.example`); the Content Security Policy follows the configured host automatically. CARTO's free tier is for non-commercial use with attribution; for commercial use take a keyed plan.
 
 Event locations are free text inside the hash chain, so they are never changed. They are placed on the map from the coordinates of the matching **stop** (admins can enter latitude/longitude when adding a stop under *Users & stops*), then from a built-in gazetteer (`src/geo.js`). Places that cannot be located are listed under the map instead of being guessed. Existing PostgreSQL databases get the two new `stops` columns automatically on start.
 
-All navigation lives in one menu (header): Dashboard, Consignment map, Scan QR, Register batch, Audit, Users & stops and the public portal, with the signed-in user and Sign out in the same menu. On phones it collapses behind a **Menu** button. The public verification page uses the same menu. Existing CSS rules and theme variables are unchanged; the new rules are appended to `public/css/style.css`.
+All navigation lives in one dropdown menu (☰ icon in the header): Dashboard, Consignment map, Scan QR, Register batch, Audit, Users & stops and the public portal, with the signed-in user and Sign out in the same menu. It is a single ☰ icon that opens a dropdown with every option; choosing one opens that page. The public verification page uses the same menu. Existing CSS rules and theme variables are unchanged; the new rules are appended to `public/css/style.css`.
 
 ## How it maps to the proposal
 

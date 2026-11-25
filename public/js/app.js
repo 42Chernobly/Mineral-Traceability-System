@@ -218,7 +218,7 @@
   }
 
 
-  // ---------- consignment movement map (Leaflet, self-hosted; tiles from OpenStreetMap) ----------
+  // ---------- consignment movement map (Leaflet, self-hosted; basemap provider set in server config) ----------
   // Colour groups reuse the app's theme tokens, so light and dark mode both work.
   const GROUPS = {
     origin: { label: 'At mine / being processed', cls: 's-origin', token: '--muted', st: ['registered', 'processed'] },
@@ -230,11 +230,23 @@
   const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
   const DEFAULT_VIEW = [[-17.5, 20], 5]; // Zambia / Namibia corridor when nothing is plotted yet
 
+  const isDark = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)); };
+  let baseLayer = null;
+  function setBasemap() {
+    const m = (meta && meta.map) || {};
+    if (!cmap || !m.tile_url) return;
+    const dark = isDark() && !!m.tile_url_dark;
+    if (baseLayer) cmap.removeLayer(baseLayer);
+    baseLayer = L.tileLayer(dark ? m.tile_url_dark : m.tile_url, { maxZoom: 19, subdomains: m.subdomains || 'abc', attribution: m.attribution || '' }).addTo(cmap);
+    baseLayer.bringToBack();
+    // a provider with no dark style falls back to darkening the light one with CSS
+    $('#cmap').classList.toggle('tiles-invert', isDark() && !m.tile_url_dark);
+  }
   let cmap = null; let cLayer = null; let cData = null; let cCodes = null; let routeBounds = null; let allBounds = null;
   function destroyMap() { if (cmap) { cmap.remove(); cmap = null; cLayer = null; } }
   if (window.matchMedia) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    (mq.addEventListener ? mq.addEventListener.bind(mq, 'change') : mq.addListener.bind(mq))(() => { if (cmap) drawMap(cCodes); });
+    (mq.addEventListener ? mq.addEventListener.bind(mq, 'change') : mq.addListener.bind(mq))(() => { if (cmap) { setBasemap(); drawMap(cCodes); } });
   }
 
   // A schematic curved leg between two points (long legs, e.g. by sea, would otherwise cut across land).
@@ -259,7 +271,7 @@
     if (!data) { $('#cmap').innerHTML = '<p class="muted" style="padding:1rem">The map could not be loaded. The table below is unaffected.</p>'; $('.map-actions').classList.add('hidden'); return; }
     if (!window.L) { $('#cmap').innerHTML = '<p class="muted" style="padding:1rem">The map library could not load. The table below lists each consignment’s last recorded location.</p>'; return; }
     cmap = L.map('cmap', { worldCopyJump: true, minZoom: 2 }).setView(DEFAULT_VIEW[0], DEFAULT_VIEW[1]);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }).addTo(cmap);
+    setBasemap();
     cLayer = L.layerGroup().addTo(cmap);
     $('#map-route').addEventListener('click', () => routeBounds && cmap.fitBounds(routeBounds, { padding: [30, 30], maxZoom: 8 }));
     $('#map-all').addEventListener('click', () => allBounds && cmap.fitBounds(allBounds, { padding: [30, 30] }));

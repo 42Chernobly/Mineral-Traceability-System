@@ -6,7 +6,8 @@
   if (!header || !toggle) return;
   const set = (open) => { header.classList.toggle('open', open); toggle.setAttribute('aria-expanded', String(open)); };
   toggle.addEventListener('click', () => set(!header.classList.contains('open')));
-  // choosing a destination (or pressing Escape) closes the menu on small screens
+  // choosing a destination (or pressing Escape / clicking elsewhere) closes the menu
   header.addEventListener('click', (e) => { if (e.target.closest('nav a')) set(false); });
+  document.addEventListener('click', (e) => { if (!header.contains(e.target)) set(false); }); // click elsewhere closes
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') set(false); });
 })();

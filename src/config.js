@@ -13,8 +13,39 @@ function secret(name) {
   return crypto.randomBytes(48).toString('hex');
 }
 
+// Map basemap. The default (CARTO) is designed for applications and has matching light and dark styles.
+// OpenStreetMap's own tile server (tile.openstreetmap.org) is NOT suitable for a deployed app: its usage
+// policy blocks apps that don't meet its conditions, which shows as "Access blocked" tiles.
+// Override with TILE_URL (and optionally TILE_URL_DARK, TILE_ATTRIBUTION, TILE_SUBDOMAINS) to use another
+// provider, e.g. MapTiler or Stadia Maps with your own API key.
+const tileUrl = process.env.TILE_URL || 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const tileUrlDark = process.env.TILE_URL
+  ? process.env.TILE_URL_DARK || ''
+  : process.env.TILE_URL_DARK || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const tileAttribution = process.env.TILE_ATTRIBUTION || (process.env.TILE_URL
+  ? '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+  : '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>');
+
+/** CSP img-src entries for a tile URL template: {s} becomes a wildcard subdomain. */
+function tileOrigin(template) {
+  if (!template) return null;
+  try {
+    const sub = template.includes('{s}');
+    const u = new URL(template.replace('{s}', 'x').replace(/\{[a-z]+\}/g, '0'));
+    if (u.protocol !== 'https:') return null; // plain-http tiles would be blocked as mixed content anyway
+    return sub ? `https://*.${u.host.replace(/^x\./, '')}` : u.origin;
+  } catch (e) { return null; }
+}
+
 module.exports = {
   isProd,
+  map: {
+    tileUrl,
+    tileUrlDark,
+    attribution: tileAttribution,
+    subdomains: process.env.TILE_SUBDOMAINS || 'abcd',
+    imgOrigins: [...new Set([tileOrigin(tileUrl), tileOrigin(tileUrlDark)].filter(Boolean))],
+  },
   port: parseInt(process.env.PORT || '3000', 10),
   baseUrl: (process.env.BASE_URL || '').replace(/\/$/, ''),
   databaseUrl: process.env.DATABASE_URL || '',
