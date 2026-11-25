@@ -1,0 +1,19 @@
+{
+  "info": { "name": "Mineral Traceability API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" },
+    { "key": "batch", "value": "ZM-CU-2026-0001" },
+    { "key": "qrToken", "value": "" }
+  ],
+  "item": [
+    { "name": "Login (regulator)", "event": [{ "listen": "test", "script": { "exec": ["pm.test('200', () => pm.response.code === 200);", "pm.collectionVariables.set('token', pm.response.json().token);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/api/auth/login", "body": { "mode": "raw", "raw": "{\"username\":\"reg_zra\",\"password\":\"Demo@12345\"}" } } },
+    { "name": "List batches", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/batches" } },
+    { "name": "Batch detail + integrity", "event": [{ "listen": "test", "script": { "exec": ["pm.test('chain valid', () => pm.expect(pm.response.json().integrity.valid).to.be.true);", "pm.collectionVariables.set('qrToken', pm.response.json().qr.token);"] } }],
+      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/batches/{{batch}}" } },
+    { "name": "Public verify (no auth)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/public/verify?t={{qrToken}}", "host": ["{{baseUrl}}"], "path": ["api", "public", "verify"], "query": [{ "key": "t", "value": "{{qrToken}}" }] } } },
+    { "name": "Audit all chains", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/audit/verify" } },
+    { "name": "No token -> 401", "event": [{ "listen": "test", "script": { "exec": ["pm.test('401', () => pm.response.code === 401);"] } }], "request": { "method": "GET", "url": "{{baseUrl}}/api/batches" } }
+  ]
+}

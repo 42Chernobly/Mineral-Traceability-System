@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mineral Traceability</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231d5c45'/%3E%3Cpath d='M16 6l8 6-3 12H11L8 12z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/js/vendor/leaflet/leaflet.css">
+</head>
+<body>
+  <section id="login-view" class="hidden">
+    <div class="card login">
+      <h1>Mineral Traceability</h1>
+      <p class="muted">Secure cloud platform for mineral production and chain of custody.</p>
+      <form id="login-form">
+        <label for="username">Username</label>
+        <input id="username" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required>
+        <p id="login-error" class="small" style="color:var(--bad)" role="alert"></p>
+        <button class="btn" type="submit" style="width:100%">Sign in</button>
+      </form>
+      <p class="demo-accounts muted" id="demo-accounts"></p>
+      <hr style="border:0;border-top:1px solid var(--line);margin:1rem 0">
+      <p style="margin:.2rem 0 .6rem"><b>Work at a mine, weighbridge, border post or port?</b></p>
+      <a href="#/signup" class="btn secondary" style="display:block;text-align:center;text-decoration:none;padding:.55rem 1rem;border:1px solid var(--brand);border-radius:7px;font-weight:600">Request access at your stop</a>
+      <p class="small"><a href="/verify.html">Public verification portal (no login)</a></p>
+    </div>
+  </section>
+
+  <section id="signup-view" class="hidden">
+    <div class="card login" style="max-width:520px;margin-top:4vh">
+      <h1>Request access</h1>
+      <p class="muted">Choose the place where you work. You will get the account type that matches it, and an administrator approves your request before you can sign in.</p>
+      <form id="signup-form">
+        <label for="su-stop">Where do you work?</label>
+        <select id="su-stop" required></select>
+        <p id="su-role" class="small muted" aria-live="polite"></p>
+        <div class="row">
+          <div><label for="su-full">Full name</label><input id="su-full" required maxlength="120" autocomplete="name"></div>
+          <div><label for="su-org">Organisation</label><input id="su-org" required maxlength="120" autocomplete="organization" placeholder="e.g. Walvis Bay Port Authority"></div>
+        </div>
+        <div class="row">
+          <div><label for="su-user">Choose a username</label><input id="su-user" required minlength="3" maxlength="40" autocomplete="username" pattern="[A-Za-z0-9_.\-]+"></div>
+          <div><label for="su-pass">Password (8+ characters)</label><input id="su-pass" type="password" required minlength="8" maxlength="72" autocomplete="new-password"></div>
+        </div>
+        <label for="su-contact">Phone or email (optional, helps the administrator verify you)</label>
+        <input id="su-contact" maxlength="120" autocomplete="email">
+        <p id="su-error" class="small" style="color:var(--bad)" role="alert"></p>
+        <button class="btn" type="submit" style="width:100%">Send request</button>
+      </form>
+      <div id="su-done" class="banner ok hidden" role="status"></div>
+      <p class="small"><a href="#/">← Back to sign in</a></p>
+    </div>
+  </section>
+
+  <section id="app-view" class="hidden">
+    <header class="top">
+      <span class="brand">⛏ Mineral Traceability</span>
+      <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav">☰ Menu</button>
+      <nav id="nav" aria-label="Main menu">
+        <span id="nav-links" class="nav-links"></span>
+        <span id="offline-pill" class="offline-pill hidden"></span>
+        <span class="who"><span id="who"></span> · <button id="logout" class="btn secondary" style="padding:.2rem .6rem;color:inherit;border-color:rgba(255,255,255,.6)">Sign out</button></span>
+      </nav>
+    </header>
+    <main id="main"></main>
+  </section>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="/js/vendor/leaflet/leaflet.js"></script>
+  <script src="/js/nav.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

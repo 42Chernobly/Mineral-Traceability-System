@@ -1,0 +1,27 @@
+# Render Blueprint: one web service + managed PostgreSQL (hosting option named in the proposal).
+services:
+  - type: web
+    name: mineral-traceability
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase: { name: mineral-db, property: connectionString }
+      - key: DATABASE_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: QR_SECRET
+        generateValue: true
+      - key: SEED_DEMO
+        value: "true"          # set to false for real use
+      - key: BASE_URL
+        sync: false            # e.g. https://mineral-traceability.onrender.com
+databases:
+  - name: mineral-db
+    plan: free

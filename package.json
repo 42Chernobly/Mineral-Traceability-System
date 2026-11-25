@@ -1,0 +1,36 @@
+{
+  "name": "mineral-traceability",
+  "version": "1.0.0",
+  "description": "Secure cloud-based mineral production and traceability system (ICT431 capstone prototype)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node -e \"require('./src/db').init().then(()=>require('./src/seed').seedDemo()).then(r=>{console.log(r?'seeded':'already has data');process.exit(0)})\"",
+    "test": "NODE_ENV=test jest --runInBand"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.4",
+    "helmet": "^8.3.0",
+    "html5-qrcode": "^2.3.8",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1",
+    "pg-mem": "^3.0.14",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "jest": "^30.5.2",
+    "supertest": "^7.3.2"
+  }
+}

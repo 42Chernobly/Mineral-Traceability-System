@@ -1,0 +1,444 @@
+{
+  "info": {
+    "name": "Mineral Traceability API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "demoPassword",
+      "value": "Demo@12345"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "batchCode",
+      "value": ""
+    },
+    {
+      "key": "qrToken",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Login as mine_solwezi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"200\",()=>pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"token\",pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"mine_solwezi\",\n  \"password\": \"{{demoPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as wb_kitwe",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"200\",()=>pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"token\",pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"wb_kitwe\",\n  \"password\": \"{{demoPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as reg_zra",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"200\",()=>pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"token\",pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"reg_zra\",\n  \"password\": \"{{demoPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"200\",()=>pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"token\",pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"{{demoPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Who am I",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Batches",
+      "item": [
+        {
+          "name": "Register batch (login as mine_solwezi first)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"batchCode\",pm.response.json().batch.batch_code);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/batches",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mineral\": \"Copper cathode\",\n  \"mine_site\": \"Solwezi, North-Western Province\",\n  \"province\": \"North-Western\",\n  \"declared_weight_kg\": 24800,\n  \"grade\": \"LME Grade A\",\n  \"destination\": \"Switzerland\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List batches",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/batches"
+          }
+        },
+        {
+          "name": "Batch detail + integrity + QR link",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"chain valid\",()=>pm.expect(pm.response.json().integrity.valid).to.be.true);",
+                  "pm.collectionVariables.set(\"qrToken\",pm.response.json().qr.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/batches/{{batchCode}}"
+          }
+        },
+        {
+          "name": "Batch QR image (PNG)",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/batches/{{batchCode}}/qr"
+          }
+        },
+        {
+          "name": "Add event (DISPATCHED, as mine)",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/batches/{{batchCode}}/events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_type\": \"DISPATCHED\",\n  \"location\": \"Solwezi plant gate\",\n  \"notes\": \"Loaded on truck\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Add event (WEIGHBRIDGE, login as wb_kitwe)",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/batches/{{batchCode}}/events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_type\": \"WEIGHBRIDGE\",\n  \"location\": \"Kitwe Weighbridge\",\n  \"weight_kg\": 24790\n}"
+            }
+          }
+        },
+        {
+          "name": "Offline sync (idempotent)",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/events/sync",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"events\": [\n    {\n      \"batch_code\": \"{{batchCode}}\",\n      \"event_type\": \"CHECKPOINT\",\n      \"location\": \"Kasumbalesa\",\n      \"client_ref\": \"postman-1\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Scan / resolve signed QR",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/scan/resolve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{qrToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Public verification (no auth)",
+      "item": [
+        {
+          "name": "Verify genuine QR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"genuine\",()=>pm.expect(pm.response.json().genuine).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/public/verify?t={{qrToken}}"
+          }
+        },
+        {
+          "name": "Verify forged QR (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"rejected\",()=>pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/public/verify?t=v1.ZM-CU-2026-0001.AAAAAAAAAAAAAAAAAAAAAA"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Security checks",
+      "item": [
+        {
+          "name": "No token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"401\",()=>pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/batches"
+          }
+        },
+        {
+          "name": "Wrong role: buyer/mine cannot audit -> 403 (login as mine_solwezi)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"403\",()=>pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/audit/verify"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Regulator",
+      "item": [
+        {
+          "name": "Full integrity audit (login as reg_zra)",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/audit/verify"
+          }
+        }
+      ]
+    }
+  ]
+}

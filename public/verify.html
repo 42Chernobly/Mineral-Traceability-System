@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verify a Consignment</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231d5c45'/%3E%3Cpath d='M16 6l8 6-3 12H11L8 12z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="top">
+    <span class="brand">⛏ Public Verification Portal</span>
+    <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav">☰ Menu</button>
+    <nav id="nav" aria-label="Main menu">
+      <span class="nav-links">
+        <a href="/verify.html" class="active" aria-current="page">Verify a consignment</a>
+        <a href="/">Staff sign in</a>
+      </span>
+    </nav>
+  </header>
+  <main style="max-width:760px">
+    <div id="out"></div>
+    <div class="card" id="scan-card">
+      <h3>Check a consignment</h3>
+      <p class="muted small">Scan the QR code on a mineral consignment, or paste its link/token. No login required; commercial details such as weights and buyers are not shown publicly.</p>
+      <div id="reader"></div>
+      <form id="manual"><label for="tok">QR link or token</label><input id="tok" required placeholder="v1.ZM-CU-2026-0001.…">
+      <p><button class="btn" type="submit">Verify</button></p></form>
+    </div>
+  </main>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="/js/nav.js"></script>
+  <script src="/js/verify.js"></script>
+</body>
+</html>
