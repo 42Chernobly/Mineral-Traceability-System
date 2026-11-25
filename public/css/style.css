@@ -94,17 +94,17 @@ header.top nav .who .btn.secondary { color: var(--brand) !important; border-colo
 
 /* ---- Consignment map (dashboard) ---- */
 .map-card { padding: 0; overflow: hidden; }
-.map-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; padding: .75rem 1rem; border-bottom: 1px solid var(--line); }
+.map-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); }
 .map-head h2, .map-head p { margin: 0; }
 .map-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
-.map-actions button { padding: .25rem .7rem; }
-#cmap { height: 460px; background: var(--bg); z-index: 0; }
-.map-legend { display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; padding: .6rem 1rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--muted); }
+.map-actions button { padding: .2rem .6rem; font-size: .8rem; }
+#cmap { height: 300px; background: var(--bg); z-index: 0; }
+.map-legend { display: flex; flex-wrap: wrap; gap: .2rem .9rem; padding: .4rem 1rem; border-top: 1px solid var(--line); font-size: .72rem; color: var(--muted); }
 .map-legend i { display: inline-block; width: .75rem; height: .75rem; border-radius: 50%; margin-right: .35rem; vertical-align: -1px; }
 .map-legend i.flag { background: transparent; box-shadow: 0 0 0 2px var(--bad); }
 .map-legend i.dest { border-radius: 2px; background: var(--surface); border: 2px solid var(--ink); }
 .map-legend svg { vertical-align: middle; margin-right: .35rem; }
-.map-note { padding: 0 1rem .7rem; margin: 0; }
+.map-note { padding: 0 1rem .5rem; margin: 0; font-size: .72rem; }
 .pin { width: 18px; height: 18px; border-radius: 50%; background: var(--muted); border: 3px solid var(--surface); box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
 .pin.s-origin { background: var(--muted); }
 .pin.s-moving { background: var(--brand); }
@@ -121,6 +121,6 @@ header.top nav .who .btn.secondary { color: var(--brand) !important; border-colo
 .leaflet-container .leaflet-control-attribution a { color: var(--muted); }
 /* only used when the configured provider has no dark basemap */
 #cmap.tiles-invert .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
-@media (max-width: 600px) { #cmap { height: 340px; } }
+@media (max-width: 600px) { #cmap { height: 240px; } }
 header.top > .offline-pill { margin-left: auto; }
 header.top > .offline-pill:not(.hidden) + .nav-toggle { margin-left: 0; }
